@@ -243,6 +243,42 @@ def load_nustar_orbit(orb_filename):
     return orb_table
 
 
+def load_GMAT_orbit(orb_filename):
+    if ".orb" not in orb_filename:
+        log.warning(
+            "You should set GMAT output files to have extension .orb"
+        )
+
+    data = np.array(np.genfromtxt("mySC.orb", skip_header=1, dtype=np.longdouble))
+
+    # should use TT_MJD
+    log.info("Opened GMAT log file {0}".format(orb_filename))
+
+    # time given as TT_MJD
+    mjds_TT = (data[:,0]+29999.5) * u.d
+
+    # pos/vel given in km in Earth-centered ICRF coordinates,
+    # **should** be the same as ECI?
+    X = data[:,1] * u.km
+    Y = data[:,2] * u.km
+    Z = data[:,3] * u.km
+    Vx = data[:,4] * u.km / u.s
+    Vy = data[:,5] * u.km / u.s
+    Vz = data[:,6] * u.km / u.s
+
+    log.info(
+        "Building orb table covering MJDs {0} to {1}".format(
+            mjds_TT.min(), mjds_TT.max()
+        )
+    )
+    orb_table = Table(
+        [mjds_TT, X, Y, Z, Vx, Vy, Vz],
+        names=("MJD_TT", "X", "Y", "Z", "Vx", "Vy", "Vz"),
+        meta={"name": "FT2"},
+    )
+    return orb_table
+
+
 def load_orbit(obs_name, orb_filename):
     """Generalized function to load one or more orbit files.
 
@@ -282,6 +318,8 @@ def load_orbit(obs_name, orb_filename):
         return load_FPorbit(orb_filename)
     elif "nustar" in lower_name:
         return load_nustar_orbit(orb_filename)
+    elif "gmat" in lower_name:
+        return load_GMAT_orbit(orb_filename)
     else:
         raise ValueError("Unrecognized satellite observatory %s." % (obs_name))
 
